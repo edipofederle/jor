@@ -64,6 +64,7 @@
 
 (defn root []
   [:div#jor-app
+   [toolbar/view]
    [:div.layout
     [sidebar/view]
     [:div.canvas-wrap

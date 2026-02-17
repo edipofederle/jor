@@ -48,6 +48,9 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 }
 
 .toolbar button:hover { border-color: var(--accent); color: var(--accent); }
+.toolbar button.active { border-color: var(--accent); color: var(--accent); }
+.toolbar button:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+.toolbar input[type=range]:disabled { opacity: 0.35; cursor: default; }
 
 /* ── Layout ───────────────────────────────────────── */
 .layout {

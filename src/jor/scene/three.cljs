@@ -6,12 +6,14 @@
 ;; Single scene state atom — holds all Three.js objects.
 ;; Never put this in re-frame; Three.js objects are not serialisable.
 (defonce ^:private state
-  (atom {:renderer nil
-         :scene    nil
-         :camera   nil
-         :controls nil
-         :raf-id   nil
-         :groups   {}}))
+  (atom {:renderer     nil
+         :scene        nil
+         :camera       nil
+         :controls     nil
+         :raf-id       nil
+         :groups       {}
+         :current-joint nil  ; cached so the animation loop can reposition without rebuilding
+         :anim         {:playing? false :factor 0.0 :dir 1}}))
 
 ;; ── Init ────────────────────────────────────────────────────────────────────
 
@@ -76,31 +78,79 @@
                      (when (instance? THREE/Mesh obj)
                        (.dispose (.-geometry obj))))))))
 
+(defn- apply-explode!
+  "Update group positions for the given explode factor without touching geometry.
+   Reads :groups and :current-joint from state."
+  [joint-def factor]
+  (let [{:keys [groups]} @state
+        parts      (:parts joint-def)
+        ex-scale   80
+        ex-factor  (max factor (get joint-def :min-explode 0))
+        ex-offsets (explode/offsets parts ex-factor ex-scale)]
+    (doseq [{:keys [id]} parts]
+      (when-let [^js grp (get groups id)]
+        (let [[ox oy oz] (get ex-offsets id [0 0 0])]
+          (.set (.-position grp) ox oy oz))))))
+
 (defn rebuild-joint!
-  "Rebuild the scene from joint-def + params + explode-factor.
-   Called from the React component on every relevant state change."
+  "Rebuild scene geometry from joint-def + params, then apply explode-factor.
+   Called from the React component on joint / param changes."
   [joint-def params explode-factor]
   (let [{:keys [scene]} @state
-        _              (clear-joint-groups!)
-        part-groups    ((:build-fn joint-def) params)
-        parts          (:parts joint-def)
-        ex-scale       80  ;; mm separation at explode-factor = 1.0
-        ;; Each joint declares :min-explode — the minimum factor needed to keep
-        ;; interlocking geometry from Z-fighting (computed per-joint from protrusion depth).
-        ex-factor      (max explode-factor (get joint-def :min-explode 0))
-        ex-offsets     (explode/offsets parts ex-factor ex-scale)]
-    (doseq [{:keys [id]} parts]
-      (when-let [grp (get part-groups id)]
-        (let [[ox oy oz] (get ex-offsets id [0 0 0])]
-          (.set (.-position grp) ox oy oz)
-          (.add scene grp))))
-    (swap! state assoc :groups part-groups)))
+        _           (clear-joint-groups!)
+        part-groups ((:build-fn joint-def) params)]
+    ;; Cache groups + joint-def so animation loop can reposition without rebuilding.
+    (swap! state assoc :groups part-groups :current-joint joint-def)
+    ;; Position each group at its exploded offset.
+    (apply-explode! joint-def explode-factor)
+    ;; Add to scene.
+    (doseq [{:keys [id]} (:parts joint-def)]
+      (when-let [^js grp (get part-groups id)]
+        (.add scene grp)))))
+
+;; ── Animation ────────────────────────────────────────────────────────────────
+
+(defn- advance-anim!
+  "Called once per render frame. Moves the ping-pong factor and repositions groups."
+  []
+  (let [{:keys [anim current-joint]} @state]
+    (when (and (:playing? anim) current-joint)
+      (let [f    (:factor anim)
+            dir  (:dir anim)
+            nf   (+ f (* dir 0.008))
+            ;; Bounce at 0 and 1
+            [nf2 ndir] (cond
+                         (>= nf 1.0) [(- 2.0 nf) -1]
+                         (<= nf 0.0) [(- nf) 1]
+                         :else       [nf dir])]
+        (swap! state #(-> %
+                          (assoc-in [:anim :factor] nf2)
+                          (assoc-in [:anim :dir] ndir)))
+        (apply-explode! current-joint nf2)))))
+
+(defn toggle-anim!
+  "Start or stop the ping-pong animation. When starting, resets to assembled."
+  []
+  (let [was-playing? (get-in @state [:anim :playing?])]
+    (if was-playing?
+      (swap! state assoc-in [:anim :playing?] false)
+      (swap! state #(-> %
+                        (assoc-in [:anim :playing?] true)
+                        (assoc-in [:anim :factor] 0.0)
+                        (assoc-in [:anim :dir] 1))))))
+
+(defn anim-playing? []
+  (get-in @state [:anim :playing?]))
+
+(defn anim-factor []
+  (get-in @state [:anim :factor]))
 
 ;; ── Render loop ──────────────────────────────────────────────────────────────
 
 (defn- render-frame! []
   (let [{:keys [renderer scene camera controls]} @state]
     (when renderer
+      (advance-anim!)
       (.update controls)
       (.render renderer scene camera))))
 
