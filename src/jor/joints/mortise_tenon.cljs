@@ -1,0 +1,90 @@
+(ns jor.joints.mortise-tenon
+  (:require [jor.geometry.primitives :as p]
+            [jor.scene.materials :as m]))
+
+;; Mortise & Tenon:
+;;
+;;   stile (Y axis, vertical)        rail (Z axis, horizontal)
+;;
+;;   ┌──────────┐                    ┌──────────────────────────┐
+;;   │          │                    │                          │
+;;   │  ┌────┐  │ ← mortise (Y×X)   │          ┌────────┐      │
+;;   │  │    │  │←stile-depth (Z)→  │          │ tenon  │      │
+;;   │  └────┘  │                   │          └────────┘      │
+;;   │          │                   └──────────────────────────┘
+;;   └──────────┘
+;;
+;; Tenon enters the stile's Z+ face; mortise goes through full Z depth (through-mortise).
+;; Explode separates them along Z.
+
+(def default-params
+  {:rail-width        50   ; X width of rail board
+   :rail-depth        20   ; Y thickness of rail board
+   :rail-length       150  ; Z body length of rail (not including tenon)
+   :stile-width       50   ; X width of stile
+   :stile-depth       50   ; Z depth of stile (tenon passes through this direction)
+   :stile-length      200  ; Y total height of stile
+   :tenon-length      50   ; Z length of tenon  (= stile-depth = through-mortise)
+   :tenon-width       30   ; X width of tenon   (< stile-width, creates shoulders)
+   :tenon-thickness   12}) ; Y height of tenon  (< rail-depth,  creates shoulders)
+
+(defn- stile
+  [{:keys [stile-width stile-depth stile-length tenon-width tenon-thickness]}]
+  (let [mat  (m/get-mat :wood-dark)
+        grp  (p/group)
+        hw   (/ stile-width 2)
+        hz   (/ stile-depth 2)
+        hl   (/ stile-length 2)
+        th   (/ tenon-thickness 2)   ; half tenon height (Y)
+        tw   (/ tenon-width 2)       ; half tenon width  (X)
+        ;; Mortise is centred at y=0.  Stile is built from 4 boxes around the hole.
+        ;; ① Bottom slab (below mortise)
+        bl   (- hl th)
+        bot  (p/set-pos! (p/make-box-mesh stile-width bl stile-depth mat)
+                         0 (- (+ th (/ bl 2))) 0)
+        ;; ② Top slab (above mortise)
+        top  (p/set-pos! (p/make-box-mesh stile-width bl stile-depth mat)
+                         0 (+ th (/ bl 2)) 0)
+        ;; ③ Left cheek (in X, beside mortise)
+        lw   (- hw tw)
+        lc   (p/set-pos! (p/make-box-mesh lw tenon-thickness stile-depth mat)
+                         (- (+ tw (/ lw 2))) 0 0)
+        ;; ④ Right cheek (in X, beside mortise)
+        rc   (p/set-pos! (p/make-box-mesh lw tenon-thickness stile-depth mat)
+                         (+ tw (/ lw 2)) 0 0)]
+    (p/add-to! grp bot top lc rc)
+    grp))
+
+(defn- rail
+  [{:keys [rail-width rail-depth rail-length stile-depth
+           tenon-width tenon-thickness tenon-length]}]
+  (let [mat    (m/get-mat :wood-light)
+        grp    (p/group)
+        hz     (/ stile-depth 2)
+        ;; Body — sits in +Z from the stile face
+        body   (p/set-pos! (p/make-box-mesh rail-width rail-depth rail-length mat)
+                           0 0 (+ hz (/ rail-length 2)))
+        ;; Tenon — protrudes from the body in −Z into the mortise.
+        ;; Centred so its +Z end is flush with the stile +Z face.
+        tenon  (p/set-pos! (p/make-box-mesh tenon-width tenon-thickness tenon-length mat)
+                           0 0 (- hz (/ tenon-length 2)))]
+    (p/add-to! grp body tenon)
+    grp))
+
+(def definition
+  {:id      :mortise-tenon
+   :label   "Mortise & Tenon"
+   :doc     "The foundational frame joint. Tenon tongue seats into mortise pocket."
+   :params  default-params
+   :min-explode 0.05  ; tiny gap to prevent Z-fighting at the stile faces
+   :parts   [{:id :rail  :label "Rail (Tenon)"    :explode-dir [0 0  1]}
+             {:id :stile :label "Stile (Mortise)" :explode-dir [0 0 -1]}]
+   :build-fn (fn [params]
+               {:rail  (rail  params)
+                :stile (stile params)})
+   :cut-seq [{:step 1 :label "Mark mortise on stile"    :part :stile}
+             {:step 2 :label "Chop mortise"             :part :stile}
+             {:step 3 :label "Mark tenon on rail"       :part :rail}
+             {:step 4 :label "Saw tenon cheeks"         :part :rail}
+             {:step 5 :label "Saw tenon shoulders"      :part :rail}
+             {:step 6 :label "Fit, glue and wedge"      :part nil}]})

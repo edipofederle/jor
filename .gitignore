@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# shadow-cljs build output
+.shadow-cljs/
+public/js/
+
+# Clojure tooling
+.clj-kondo/.cache/
+.lsp/.cache/
+
+# OS
+.DS_Store
