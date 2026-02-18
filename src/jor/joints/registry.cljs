@@ -4,19 +4,21 @@
             [jor.joints.mortise-tenon :as mortise-tenon]
             [jor.joints.half-lap      :as half-lap]
             [jor.joints.bridle        :as bridle]
-            [jor.joints.cross-lap     :as cross-lap]))
+            [jor.joints.cross-lap        :as cross-lap]
+            [jor.joints.sliding-dovetail :as sliding-dovetail]))
 
 (def joints
-  {:dovetail      dovetail/definition
-   :box-finger    box-finger/definition
-   :mortise-tenon mortise-tenon/definition
-   :half-lap      half-lap/definition
-   :bridle        bridle/definition
-   :cross-lap     cross-lap/definition})
+  {:dovetail         dovetail/definition
+   :box-finger       box-finger/definition
+   :mortise-tenon    mortise-tenon/definition
+   :half-lap         half-lap/definition
+   :bridle           bridle/definition
+   :cross-lap        cross-lap/definition
+   :sliding-dovetail sliding-dovetail/definition})
 
 ;; Ordered list for sidebar display
 (def joint-order
-  [:dovetail :box-finger :mortise-tenon :half-lap :bridle :cross-lap])
+  [:dovetail :box-finger :mortise-tenon :half-lap :bridle :cross-lap :sliding-dovetail])
 
 (defn get-joint [id]
   (get joints id))
