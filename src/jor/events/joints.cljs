@@ -10,6 +10,7 @@
  :select-joint
  (fn [db [_ joint-id]]
    (three/highlight-step! nil)
+   (three/clear-dims!)
    (-> db
        (assoc :active-joint-id joint-id)
        (assoc-in [:animation :cut-step] nil)

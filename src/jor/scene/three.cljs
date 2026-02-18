@@ -89,14 +89,21 @@
 
 ;; ── Joint rendering ─────────────────────────────────────────────────────────
 
+(defn- remove-css2d-el! [^js obj]
+  (when (.-isCSS2DObject obj)
+    (when-let [^js el (.-element obj)]
+      (when (.-parentNode el)
+        (.removeChild (.-parentNode el) el)))))
+
 (defn- clear-joint-groups! []
   (let [{:keys [^js scene groups]} @state]
     (doseq [^js g (vals groups)]
       (.remove scene g)
-      ;; Dispose all geometries (Mesh, Line, etc.) and clean up dim child groups.
+      ;; Dispose geometries and scrub CSS2DObject DOM elements from the overlay.
       (.traverse g (fn [^js obj]
                      (when (.-geometry obj)
-                       (.dispose (.-geometry obj))))))))
+                       (.dispose (.-geometry obj)))
+                     (remove-css2d-el! obj))))))
 
 (defn- apply-explode!
   "Update group positions for the given explode factor without touching geometry."
@@ -139,7 +146,8 @@
           (.remove grp dg)
           (.traverse dg (fn [^js obj]
                           (when (.-geometry obj)
-                            (.dispose (.-geometry obj))))))))))
+                            (.dispose (.-geometry obj)))
+                          (remove-css2d-el! obj))))))))
 
 (defn toggle-dims!
   "Show or hide dimension annotations for the active joint."
@@ -152,6 +160,13 @@
 
 (defn dims-showing? []
   (:show-dims? @state))
+
+(defn clear-dims!
+  "Turn off dimension annotations unconditionally; no-op if already off."
+  []
+  (when (:show-dims? @state)
+    (remove-dims-from-groups!)
+    (swap! state assoc :show-dims? false)))
 
 ;; ── Part highlighting ────────────────────────────────────────────────────────
 

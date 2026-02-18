@@ -8,12 +8,12 @@
 
 (defn view []
   (let [explode-f  @(rf/subscribe [:explode-factor])
+        _active-id @(rf/subscribe [:active-joint-id])   ; ensures re-render on every joint switch
         has-dims?  @(rf/subscribe [:active-joint-has-dims?])
         playing?   @anim-playing?
         dims?      @dims-on?
-        ;; Auto-clear dims when switching to a joint that doesn't support them
-        _          (when (and dims? (not has-dims?))
-                     (three/toggle-dims!)
+        ;; Sync local atom: clear-dims! may have been called externally (joint switch)
+        _          (when (and dims? (not (three/dims-showing?)))
                      (reset! dims-on? false))]
     [:div.toolbar
      [:h1 "jor"]
