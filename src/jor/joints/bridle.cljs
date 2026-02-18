@@ -125,6 +125,7 @@
    :label   "Bridle"
    :doc     "Open mortise — rail tongue is captured by the post fork. Strong in bending."
    :image   "images/joints/bridle.jpg"
+   :tools   ["Marking gauge" "Tenon saw" "Bench chisel" "Mallet"]
    :params  default-params
    :derived-fn (fn [{:keys [post-width post-depth cheek-thickness]}]
                  (let [tongue (- post-width (* 2 cheek-thickness))]

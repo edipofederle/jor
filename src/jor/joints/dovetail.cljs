@@ -116,6 +116,7 @@
    :label   "Dovetail"
    :doc     "Interlocking tails resist pull-apart forces. Classic drawer joint."
    :image   "images/joints/dovetail.jpg"
+   :tools   ["Marking gauge" "Sliding bevel" "Dovetail saw" "Coping saw" "Bench chisel" "Mallet"]
    :params      default-params
    :derived-fn (fn [{:keys [board-width tail-count tail-width]}]
                  (let [spacing (/ board-width (inc tail-count))

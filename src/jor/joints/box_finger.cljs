@@ -106,6 +106,7 @@
    :label   "Box / Finger"
    :doc     "Uniform rectangular fingers maximise glue surface. Ideal for boxes."
    :image   "images/joints/box-finger.jpg"
+   :tools   ["Marking gauge" "Tenon saw" "Bench chisel" "Mallet"]
    :params      default-params
    :derived-fn (fn [{:keys [board-width finger-count finger-width]}]
                  (let [total-w (* finger-count finger-width 2)

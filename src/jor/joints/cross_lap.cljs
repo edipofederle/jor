@@ -116,6 +116,7 @@
    :label   "Cross-Lap"
    :doc     "Two members cross at mid-span, each notched to half-depth. Simple and strong when glued."
    :image   "images/joints/cross-lap.jpg"
+   :tools   ["Marking gauge" "Tenon saw" "Bench chisel" "Mallet" "Router plane"]
    :params  default-params
    :derived-fn (fn [{:keys [member-depth member-width]}]
                  [["Notch depth" (str (/ member-depth 2) "\u00a0mm")]

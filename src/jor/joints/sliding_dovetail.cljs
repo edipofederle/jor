@@ -115,6 +115,7 @@
    :label   "Sliding Dovetail"
    :doc     "Tail board tongue slides along a groove in the housing. Resists pull-out without glue."
    :image   "images/joints/sliding-dovetail.jpg"
+   :tools   ["Marking gauge" "Dovetail saw" "Router plane" "Shoulder plane" "Bench chisel"]
    :params  default-params
    :derived-fn (fn [{:keys [groove-height groove-depth housing-depth]}]
                  [["Groove height" (str groove-height "\u00a0mm")]

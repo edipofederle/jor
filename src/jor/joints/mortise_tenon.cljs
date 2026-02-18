@@ -129,6 +129,7 @@
    :label   "Mortise & Tenon"
    :doc     "The foundational frame joint. Tenon tongue seats into mortise pocket."
    :image   "images/joints/mortise-tenon.jpg"
+   :tools   ["Marking gauge" "Mortise chisel" "Bench chisel" "Mallet" "Tenon saw" "Router plane"]
    :params  default-params
    :derived-fn (fn [{:keys [rail-width rail-depth tenon-width tenon-thickness tenon-length]}]
                  (let [sh-x (/ (- rail-width tenon-width) 2)

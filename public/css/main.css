@@ -124,6 +124,21 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .param-name { color: var(--text-dim); }
 .param-val  { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
 
+/* ── Hand tools list ──────────────────────────────── */
+.tools-list {
+  list-style: disc;
+  margin-top: 4px;
+  padding-left: 16px;
+}
+
+.tools-list li {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  padding: 2px 0;
+}
+
+.tools-list li::marker { color: var(--accent); }
+
 /* ── Cut sequence steps ────────────────────────────── */
 .cut-seq { list-style: none; margin-top: 4px; }
 

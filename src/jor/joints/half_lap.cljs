@@ -97,6 +97,7 @@
    :label   "Half-Lap"
    :doc     "Each member loses half its depth at the joint. Combined they stay flush."
    :image   "images/joints/half-lap.jpg"
+   :tools   ["Marking gauge" "Tenon saw" "Bench chisel" "Mallet" "Router plane"]
    :params      default-params
    :derived-fn (fn [{:keys [member-depth overlap-length]}]
                  [["Cut depth"   (str (/ member-depth 2) "\u00a0mm")]

@@ -30,6 +30,13 @@
              :on-error (fn [e] (set! (.. e -target -style -display) "none"))}])
          [:h2 "About"]
          [:p.joint-doc (:doc active)]]
+        (when-let [tools (seq (:tools active))]
+          [:div.sidebar-section
+           [:h2 "Hand Tools"]
+           [:ul.tools-list
+            (for [t tools]
+              ^{:key t}
+              [:li t])]])
         (when-let [derived-fn (:derived-fn active)]
           [:div.sidebar-section
            [:h2 "Key measurements"]
