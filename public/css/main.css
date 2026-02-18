@@ -99,6 +99,44 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   margin-top: 10px;
 }
 
+/* ── Joint photo (sidebar About section) ──────────── */
+.joint-photo {
+  display: block;
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+/* ── Params table (sidebar About section) ─────────── */
+.params-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 0.72rem;
+}
+
+.params-table td { padding: 3px 0; }
+.params-table tr + tr td { border-top: 1px solid rgba(58, 58, 90, 0.4); }
+
+.param-name { color: var(--text-dim); }
+.param-val  { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* ── Dimension labels (CSS2DRenderer overlay) ─────── */
+.dim-label {
+  font-family: monospace;
+  font-size: 11px;
+  color: #99bbee;
+  background: rgba(30, 30, 46, 0.75);
+  padding: 2px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
 /* ── Canvas container ─────────────────────────────── */
 .canvas-wrap {
   flex: 1;

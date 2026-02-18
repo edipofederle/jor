@@ -52,7 +52,17 @@
   {:id      :dovetail
    :label   "Dovetail"
    :doc     "Interlocking tails resist pull-apart forces. Classic drawer joint."
+   :image   "images/joints/dovetail.jpg"
    :params      default-params
+   :derived-fn (fn [{:keys [board-width tail-count tail-width]}]
+                 (let [spacing (/ board-width (inc tail-count))
+                       pin-w   (* spacing 0.35)
+                       fmt     #(if (== % (js/Math.floor %))
+                                  (str (int %) "\u00a0mm")
+                                  (str (.toFixed % 1) "\u00a0mm"))]
+                   [["Tail spacing (c/c)" (fmt spacing)]
+                    ["Pin width (approx)" (fmt pin-w)]
+                    ["Tail width"         (fmt tail-width)]]))
    :min-explode 0.15  ; tails are 20 mm; need f≥0.125 to avoid interpenetration
    :parts   [{:id :tail-board :label "Tail Board" :explode-dir [0 0 -1]}
              {:id :pin-board  :label "Pin Board"  :explode-dir [0 0  1]}]

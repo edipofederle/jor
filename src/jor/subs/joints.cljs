@@ -28,6 +28,12 @@
  (fn [db _] (:joint-params db)))
 
 (rf/reg-sub
+ :active-joint-has-dims?
+ :<- [:active-joint]
+ (fn [joint _]
+   (boolean (:dims-fn joint))))
+
+(rf/reg-sub
  :merged-joint-params
  :<- [:active-joint]
  :<- [:active-joint-id]

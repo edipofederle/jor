@@ -42,7 +42,11 @@
   {:id      :half-lap
    :label   "Half-Lap"
    :doc     "Each member loses half its depth at the joint. Combined they stay flush."
+   :image   "images/joints/half-lap.jpg"
    :params      default-params
+   :derived-fn (fn [{:keys [member-depth overlap-length]}]
+                 [["Cut depth"   (str (/ member-depth 2) "\u00a0mm")]
+                  ["Cut length"  (str overlap-length "\u00a0mm")]])
    :min-explode 0.10  ; half-depth overlap is 10 mm; need f≥0.0625 to avoid interpenetration
    :parts   [{:id :member-a :label "Member A" :explode-dir [0  1 0]}
              {:id :member-b :label "Member B" :explode-dir [0 -1 0]}]

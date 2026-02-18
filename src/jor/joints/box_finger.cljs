@@ -49,7 +49,13 @@
   {:id      :box-finger
    :label   "Box / Finger"
    :doc     "Uniform rectangular fingers maximise glue surface. Ideal for boxes."
+   :image   "images/joints/box-finger.jpg"
    :params      default-params
+   :derived-fn (fn [{:keys [board-width finger-count finger-width]}]
+                 (let [total-w (* finger-count finger-width 2)
+                       edge    (/ (- board-width total-w) 2)]
+                   [["Finger pitch"  (str (* finger-width 2) "\u00a0mm")]
+                    ["Edge offset"   (str edge "\u00a0mm")]]))
    :min-explode 0.10  ; fingers are 10 mm; need f≥0.0625 to avoid interpenetration
    :parts   [{:id :board-a :label "Board A" :explode-dir [0 0 -1]}
              {:id :board-b :label "Board B" :explode-dir [0 0  1]}]

@@ -1,19 +1,24 @@
 (ns jor.scene.three
   (:require ["three" :as THREE]
             ["three/addons/controls/OrbitControls.js" :refer [OrbitControls]]
-            [jor.geometry.explode :as explode]))
+            ["three/addons/renderers/CSS2DRenderer.js" :refer [CSS2DRenderer]]
+            [jor.geometry.explode :as explode]
+            [jor.geometry.dimensions :as dimensions]))
 
 ;; Single scene state atom — holds all Three.js objects.
 ;; Never put this in re-frame; Three.js objects are not serialisable.
 (defonce ^:private state
-  (atom {:renderer     nil
-         :scene        nil
-         :camera       nil
-         :controls     nil
-         :raf-id       nil
-         :groups       {}
-         :current-joint nil  ; cached so the animation loop can reposition without rebuilding
-         :anim         {:playing? false :factor 0.0 :dir 1}}))
+  (atom {:renderer      nil
+         :css2d         nil   ; CSS2DRenderer for HTML labels
+         :scene         nil
+         :camera        nil
+         :controls      nil
+         :raf-id        nil
+         :groups        {}
+         :show-dims?    false
+         :current-joint  nil  ; cached for animation / dim toggling
+         :current-params nil
+         :anim          {:playing? false :factor 0.0 :dir 1}}))
 
 ;; ── Init ────────────────────────────────────────────────────────────────────
 
@@ -21,17 +26,28 @@
   "Creates renderer, scene, camera and lights attached to canvas el.
    Must be called once after the <canvas> DOM element is mounted."
   [canvas]
-  (let [w        (.-clientWidth canvas)
-        h        (.-clientHeight canvas)
-        renderer (THREE/WebGLRenderer. #js {:canvas canvas :antialias true
-                                            :logarithmicDepthBuffer true})
-        scene    (THREE/Scene.)
-        camera   (THREE/PerspectiveCamera. 45 (/ w h) 1 1000)
-        controls (OrbitControls. camera (.-domElement renderer))]
+  (let [w         (.-clientWidth canvas)
+        h         (.-clientHeight canvas)
+        renderer  (THREE/WebGLRenderer. #js {:canvas canvas :antialias true
+                                             :logarithmicDepthBuffer true})
+        css2d     (CSS2DRenderer.)
+        container (.-parentElement canvas)
+        scene     (THREE/Scene.)
+        camera    (THREE/PerspectiveCamera. 45 (/ w h) 1 1000)
+        controls  (OrbitControls. camera (.-domElement renderer))]
 
     (.setSize renderer w h)
     (.setPixelRatio renderer js/window.devicePixelRatio)
     (set! (.-background scene) (THREE/Color. 0x1e1e2e))
+
+    ;; CSS2DRenderer — same pixel size as WebGL canvas, sits on top of it.
+    (.setSize css2d w h)
+    (let [^js el (.-domElement css2d)]
+      (set! (.. el -style -position)      "absolute")
+      (set! (.. el -style -top)           "0")
+      (set! (.. el -style -left)          "0")
+      (set! (.. el -style -pointerEvents) "none"))
+    (.appendChild container (.-domElement css2d))
 
     (.set (.-position camera) 200 150 200)
     (.lookAt camera 0 0 0)
@@ -40,8 +56,8 @@
     (set! (.-dampingFactor controls) 0.05)
 
     ;; Lights
-    (let [ambient  (THREE/AmbientLight. 0xffffff 0.6)
-          dir-l    (THREE/DirectionalLight. 0xffffff 0.9)]
+    (let [ambient (THREE/AmbientLight. 0xffffff 0.6)
+          dir-l   (THREE/DirectionalLight. 0xffffff 0.9)]
       (.set (.-position dir-l) 150 300 150)
       (.add scene ambient)
       (.add scene dir-l))
@@ -52,20 +68,23 @@
       (.add scene grid))
 
     (swap! state merge {:renderer renderer
+                        :css2d    css2d
                         :scene    scene
                         :camera   camera
-                        :controls controls})))
+                        :controls controls
+                        :show-dims? false})))
 
 ;; ── Resize ──────────────────────────────────────────────────────────────────
 
 (defn resize!
   "Update renderer and camera when canvas container size changes."
   [w h]
-  (let [{:keys [^js renderer ^js camera]} @state]
+  (let [{:keys [^js renderer ^js css2d ^js camera]} @state]
     (when renderer
       (set! (.-aspect camera) (/ w h))
       (.updateProjectionMatrix camera)
-      (.setSize renderer w h))))
+      (.setSize renderer w h)
+      (when css2d (.setSize css2d w h)))))
 
 ;; ── Joint rendering ─────────────────────────────────────────────────────────
 
@@ -73,14 +92,13 @@
   (let [{:keys [^js scene groups]} @state]
     (doseq [^js g (vals groups)]
       (.remove scene g)
-      ;; Dispose child mesh geometries to avoid GPU memory leaks
+      ;; Dispose all geometries (Mesh, Line, etc.) and clean up dim child groups.
       (.traverse g (fn [^js obj]
-                     (when (instance? THREE/Mesh obj)
+                     (when (.-geometry obj)
                        (.dispose (.-geometry obj))))))))
 
 (defn- apply-explode!
-  "Update group positions for the given explode factor without touching geometry.
-   Reads :groups and :current-joint from state."
+  "Update group positions for the given explode factor without touching geometry."
   [joint-def factor]
   (let [{:keys [groups]} @state
         parts      (:parts joint-def)
@@ -92,33 +110,75 @@
         (let [[ox oy oz] (get ex-offsets id [0 0 0])]
           (.set (.-position grp) ox oy oz))))))
 
+;; ── Dimension annotations ────────────────────────────────────────────────────
+;; Dim groups are children of their respective part groups so they move with
+;; parts during explode/animate. CSS2DRenderer re-projects labels every frame.
+
+(defn- add-dims-to-groups!
+  "Build dim annotations and add each as a tagged child of its part group."
+  [joint-def params]
+  (when-let [dims-fn (:dims-fn joint-def)]
+    (let [groups   (:groups @state)
+          by-part  (dims-fn params)]
+      (doseq [[part-id specs] by-part]
+        (when-let [^js grp (get groups part-id)]
+          (let [^js dim-grp (dimensions/build-dims! specs)]
+            (set! (.. dim-grp -userData -jorDims) true)
+            (.add grp dim-grp)))))))
+
+(defn- remove-dims-from-groups!
+  "Remove and dispose all tagged dim child groups from every part group."
+  []
+  (doseq [^js grp (vals (:groups @state))]
+    (when grp
+      ;; Collect first to avoid mutating while iterating.
+      (let [to-remove (filterv #(.. ^js % -userData -jorDims)
+                               (array-seq (.-children grp)))]
+        (doseq [^js dg to-remove]
+          (.remove grp dg)
+          (.traverse dg (fn [^js obj]
+                          (when (.-geometry obj)
+                            (.dispose (.-geometry obj))))))))))
+
+(defn toggle-dims!
+  "Show or hide dimension annotations for the active joint."
+  []
+  (swap! state update :show-dims? not)
+  (let [{:keys [current-joint current-params show-dims?]} @state]
+    (if show-dims?
+      (add-dims-to-groups! current-joint current-params)
+      (remove-dims-from-groups!))))
+
+(defn dims-showing? []
+  (:show-dims? @state))
+
+;; ── Rebuild joint ────────────────────────────────────────────────────────────
+
 (defn rebuild-joint!
-  "Rebuild scene geometry from joint-def + params, then apply explode-factor.
-   Called from the React component on joint / param changes."
+  "Rebuild scene geometry from joint-def + params, then apply explode-factor."
   [joint-def params explode-factor]
   (let [{:keys [scene]} @state
         _           (clear-joint-groups!)
         part-groups ((:build-fn joint-def) params)]
-    ;; Cache groups + joint-def so animation loop can reposition without rebuilding.
-    (swap! state assoc :groups part-groups :current-joint joint-def)
-    ;; Position each group at its exploded offset.
+    (swap! state assoc :groups part-groups
+                       :current-joint  joint-def
+                       :current-params params)
     (apply-explode! joint-def explode-factor)
-    ;; Add to scene.
     (doseq [{:keys [id]} (:parts joint-def)]
       (when-let [^js grp (get part-groups id)]
-        (.add scene grp)))))
+        (.add scene grp)))
+    ;; Re-attach dim annotations if they were visible before the rebuild.
+    (when (:show-dims? @state)
+      (add-dims-to-groups! joint-def params))))
 
 ;; ── Animation ────────────────────────────────────────────────────────────────
 
-(defn- advance-anim!
-  "Called once per render frame. Moves the ping-pong factor and repositions groups."
-  []
+(defn- advance-anim! []
   (let [{:keys [anim current-joint]} @state]
     (when (and (:playing? anim) current-joint)
       (let [f    (:factor anim)
             dir  (:dir anim)
             nf   (+ f (* dir 0.008))
-            ;; Bounce at 0 and 1
             [nf2 ndir] (cond
                          (>= nf 1.0) [(- 2.0 nf) -1]
                          (<= nf 0.0) [(- nf) 1]
@@ -148,11 +208,13 @@
 ;; ── Render loop ──────────────────────────────────────────────────────────────
 
 (defn- render-frame! []
-  (let [{:keys [renderer scene camera controls]} @state]
+  (let [{:keys [renderer css2d scene camera controls]} @state]
     (when renderer
       (advance-anim!)
       (.update controls)
-      (.render renderer scene camera))))
+      (.render renderer scene camera)
+      (when css2d
+        (.render css2d scene camera)))))
 
 (defn start-loop! []
   (letfn [(tick []

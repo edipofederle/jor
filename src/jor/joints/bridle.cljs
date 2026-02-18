@@ -58,7 +58,13 @@
   {:id      :bridle
    :label   "Bridle"
    :doc     "Open mortise — rail tongue is captured by the post fork. Strong in bending."
+   :image   "images/joints/bridle.jpg"
    :params  default-params
+   :derived-fn (fn [{:keys [post-width post-depth cheek-thickness]}]
+                 (let [tongue (- post-width (* 2 cheek-thickness))]
+                   [["Tongue width"  (str tongue "\u00a0mm")]
+                    ["Fork depth"    (str post-depth "\u00a0mm")]
+                    ["Cheek (each)"  (str cheek-thickness "\u00a0mm")]]))
    :min-explode 0.05  ; tiny gap to eliminate Z-fighting at y=0 and y=fork-depth
    :parts   [{:id :post :label "Post (Fork)"   :explode-dir [0 -1 0]}
              {:id :rail :label "Rail (Tongue)" :explode-dir [0  1 0]}]

@@ -4,10 +4,17 @@
             [jor.scene.three :as three]))
 
 (defonce ^:private anim-playing? (r/atom false))
+(defonce ^:private dims-on?      (r/atom false))
 
 (defn view []
-  (let [explode-f @(rf/subscribe [:explode-factor])
-        playing?  @anim-playing?]
+  (let [explode-f  @(rf/subscribe [:explode-factor])
+        has-dims?  @(rf/subscribe [:active-joint-has-dims?])
+        playing?   @anim-playing?
+        dims?      @dims-on?
+        ;; Auto-clear dims when switching to a joint that doesn't support them
+        _          (when (and dims? (not has-dims?))
+                     (three/toggle-dims!)
+                     (reset! dims-on? false))]
     [:div.toolbar
      [:h1 "jor"]
      [:label "explode"]
@@ -26,7 +33,13 @@
                :on-click (fn []
                            (three/toggle-anim!)
                            (swap! anim-playing? not)
-                           ;; When stopping, sync final animated position back to re-frame
                            (when-not @anim-playing?
                              (rf/dispatch [:set-explode-factor (three/anim-factor)])))}
-      (if playing? "⏹ stop" "▶ animate")]]))
+      (if playing? "⏹ stop" "▶ animate")]
+     [:button {:class    (when (and has-dims? dims?) "active")
+               :disabled (not has-dims?)
+               :title    (if has-dims? "Toggle dimension lines" "No dimensions for this joint")
+               :on-click (fn []
+                           (three/toggle-dims!)
+                           (swap! dims-on? not))}
+      "dims"]]))
