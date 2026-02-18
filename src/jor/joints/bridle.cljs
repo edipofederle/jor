@@ -54,6 +54,72 @@
     (p/add-to! grp body tongue)
     grp))
 
+(defn- build-dims
+  [{:keys [post-width post-depth post-length rail-depth rail-length cheek-thickness]}]
+  (let [pw         post-width
+        pd         post-depth
+        rd         rail-depth
+        rl         rail-length
+        ct         cheek-thickness
+        fork-depth post-depth          ; slot depth equals post Z cross-section
+        body-len   (- post-length fork-depth)
+        tw         (- pw (* 2 ct))     ; tongue width
+        hpw        (/ pw 2)
+        hpd        (/ pd 2)
+        hbl        (/ body-len 2)
+        hrd        (/ rd 2)
+        hrl        (/ rl 2)]
+    {:post
+     [;; Post width at top of cheeks (X)
+      {:from       [(- hpw) fork-depth hpd]
+       :to         [hpw     fork-depth hpd]
+       :offset-dir [0 1 0]
+       :offset-dist 15
+       :label      (str pw "mm")}
+      ;; Fork depth on right cheek (Y)
+      {:from       [hpw 0 hpd]
+       :to         [hpw fork-depth hpd]
+       :offset-dir [1 0 0]
+       :offset-dist 15
+       :label      (str fork-depth "mm")}
+      ;; Cheek thickness — right cheek, at front face (Z)
+      {:from       [(- hpw ct) 0 (- hpd)]
+       :to         [hpw        0 (- hpd)]
+       :offset-dir [0 -1 0]
+       :offset-dist 15
+       :label      (str ct "mm")}
+      ;; Post cross-section depth (Z) at mid-body
+      {:from       [hpw (- hbl) (- hpd)]
+       :to         [hpw (- hbl) hpd]
+       :offset-dir [1 0 0]
+       :offset-dist 20
+       :label      (str pd "mm")}]
+     :rail
+     [;; Rail length at top of body (Z)
+      {:from       [0 (+ fork-depth rd) (- hrl)]
+       :to         [0 (+ fork-depth rd) hrl]
+       :offset-dir [0 1 0]
+       :offset-dist 15
+       :label      (str rl "mm")}
+      ;; Rail board depth at right side of body (Y)
+      {:from       [hpw fork-depth 0]
+       :to         [hpw (+ fork-depth rd) 0]
+       :offset-dir [1 0 0]
+       :offset-dist 15
+       :label      (str rd "mm")}
+      ;; Tongue width at top of tongue (X)
+      {:from       [(- (/ tw 2)) fork-depth hpd]
+       :to         [(/ tw 2)     fork-depth hpd]
+       :offset-dir [0 1 0]
+       :offset-dist 20
+       :label      (str tw "mm")}
+      ;; Tongue depth — right side of tongue (Y)
+      {:from       [(/ tw 2) 0 0]
+       :to         [(/ tw 2) fork-depth 0]
+       :offset-dir [1 0 0]
+       :offset-dist 25
+       :label      (str fork-depth "mm")}]}))
+
 (def definition
   {:id      :bridle
    :label   "Bridle"
@@ -65,6 +131,7 @@
                    [["Tongue width"  (str tongue "\u00a0mm")]
                     ["Fork depth"    (str post-depth "\u00a0mm")]
                     ["Cheek (each)"  (str cheek-thickness "\u00a0mm")]]))
+   :dims-fn  build-dims
    :min-explode 0.05  ; tiny gap to eliminate Z-fighting at y=0 and y=fork-depth
    :parts   [{:id :post :label "Post (Fork)"   :explode-dir [0 -1 0]}
              {:id :rail :label "Rail (Tongue)" :explode-dir [0  1 0]}]

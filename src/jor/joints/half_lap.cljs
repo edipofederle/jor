@@ -38,6 +38,60 @@
     (p/add-to! grp body overlap)
     grp))
 
+(defn- build-dims
+  [{:keys [member-width member-depth member-length overlap-length]}]
+  (let [mw     member-width
+        md     member-depth
+        ol     overlap-length
+        body-l (- member-length ol)
+        hmw    (/ mw 2)
+        hmd    (/ md 2)
+        hd     (/ md 2)]   ; cut depth = half the member depth
+    {:member-a
+     [;; Width across top of body
+      {:from       [(- hmw) hmd (- (/ body-l 2))]
+       :to         [hmw     hmd (- (/ body-l 2))]
+       :offset-dir [0 1 0]
+       :offset-dist 15
+       :label      (str mw "mm")}
+      ;; Full depth at right side of body
+      {:from       [hmw (- hmd) (- (/ body-l 2))]
+       :to         [hmw    hmd  (- (/ body-l 2))]
+       :offset-dir [1 0 0]
+       :offset-dist 15
+       :label      (str md "mm")}
+      ;; Cut depth at the overlap zone (y=0 to y=half-depth)
+      {:from       [hmw 0 (/ ol 2)]
+       :to         [hmw hd (/ ol 2)]
+       :offset-dir [1 0 0]
+       :offset-dist 22
+       :label      (str hd "mm")}
+      ;; Overlap / cut length along Z
+      {:from       [0 hd 0]
+       :to         [0 hd ol]
+       :offset-dir [0 1 0]
+       :offset-dist 15
+       :label      (str ol "mm")}]
+     :member-b
+     [;; Width across top of body
+      {:from       [(- hmw) hmd (/ body-l 2)]
+       :to         [hmw     hmd (/ body-l 2)]
+       :offset-dir [0 1 0]
+       :offset-dist 15
+       :label      (str mw "mm")}
+      ;; Cut depth at the overlap zone (y=0 down to y=-half-depth)
+      {:from       [(- hmw) 0 (- (/ ol 2))]
+       :to         [(- hmw) (- hd) (- (/ ol 2))]
+       :offset-dir [-1 0 0]
+       :offset-dist 22
+       :label      (str hd "mm")}
+      ;; Overlap length (goes in -Z for member-b)
+      {:from       [0 (- hd) 0]
+       :to         [0 (- hd) (- ol)]
+       :offset-dir [0 -1 0]
+       :offset-dist 15
+       :label      (str ol "mm")}]}))
+
 (def definition
   {:id      :half-lap
    :label   "Half-Lap"
@@ -47,6 +101,7 @@
    :derived-fn (fn [{:keys [member-depth overlap-length]}]
                  [["Cut depth"   (str (/ member-depth 2) "\u00a0mm")]
                   ["Cut length"  (str overlap-length "\u00a0mm")]])
+   :dims-fn  build-dims
    :min-explode 0.10  ; half-depth overlap is 10 mm; need f≥0.0625 to avoid interpenetration
    :parts   [{:id :member-a :label "Member A" :explode-dir [0  1 0]}
              {:id :member-b :label "Member B" :explode-dir [0 -1 0]}]

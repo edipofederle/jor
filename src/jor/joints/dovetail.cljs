@@ -48,6 +48,69 @@
         (.add grp pin)))
     grp))
 
+(defn- build-dims
+  [{:keys [board-width board-depth board-length tail-count tail-width]}]
+  (let [bw       board-width
+        bd       board-depth
+        body-len (- board-length 20)
+        spacing  (/ bw (inc tail-count))
+        pin-w    (* spacing 0.35)
+        hbw      (/ bw 2)
+        hbd      (/ bd 2)
+        htw      (/ tail-width 2)
+        hpw      (/ pin-w 2)
+        ;; first tail x (spacing-based, centred around 0)
+        t0x      (- spacing hbw)
+        ;; first pin x (left-edge pin, centred at 0.5*spacing from left)
+        p0x      (- (* 0.5 spacing) hbw)
+        fmt      #(if (== (js/Math.round %) %)
+                    (str (int %) "mm")
+                    (str (.toFixed % 1) "mm"))]
+    {:tail-board
+     [;; Board width at top-back of body (X)
+      {:from       [(- hbw) hbd (- (/ body-len 2))]
+       :to         [hbw     hbd (- (/ body-len 2))]
+       :offset-dir [0 1 0]
+       :offset-dist 15
+       :label      (str bw "mm")}
+      ;; Board depth at right side of body (Y)
+      {:from       [hbw (- hbd) (- (/ body-len 2))]
+       :to         [hbw    hbd  (- (/ body-len 2))]
+       :offset-dir [1 0 0]
+       :offset-dist 15
+       :label      (str bd "mm")}
+      ;; Tail width at top of first tail (X)
+      {:from       [(- t0x htw) hbd 10]
+       :to         [(+ t0x htw) hbd 10]
+       :offset-dir [0 1 0]
+       :offset-dist 20
+       :label      (fmt tail-width)}
+      ;; Tail projection depth (Z) — 20 mm for all tails
+      {:from       [hbw 0 0]
+       :to         [hbw 0 20]
+       :offset-dir [1 0 0]
+       :offset-dist 15
+       :label      "20mm"}]
+     :pin-board
+     [;; Board width at top-back of body (X)
+      {:from       [(- hbw) hbd (/ body-len 2)]
+       :to         [hbw     hbd (/ body-len 2)]
+       :offset-dir [0 1 0]
+       :offset-dist 15
+       :label      (str bw "mm")}
+      ;; Pin width at top of first (leftmost) pin (X)
+      {:from       [(- p0x hpw) hbd -10]
+       :to         [(+ p0x hpw) hbd -10]
+       :offset-dir [0 1 0]
+       :offset-dist 20
+       :label      (fmt pin-w)}
+      ;; Pin projection depth (Z) — 20 mm for all pins
+      {:from       [(- hbw) 0 0]
+       :to         [(- hbw) 0 -20]
+       :offset-dir [-1 0 0]
+       :offset-dist 15
+       :label      "20mm"}]}))
+
 (def definition
   {:id      :dovetail
    :label   "Dovetail"
@@ -63,6 +126,7 @@
                    [["Tail spacing (c/c)" (fmt spacing)]
                     ["Pin width (approx)" (fmt pin-w)]
                     ["Tail width"         (fmt tail-width)]]))
+   :dims-fn  build-dims
    :min-explode 0.15  ; tails are 20 mm; need f≥0.125 to avoid interpenetration
    :parts   [{:id :tail-board :label "Tail Board" :explode-dir [0 0 -1]}
              {:id :pin-board  :label "Pin Board"  :explode-dir [0 0  1]}]

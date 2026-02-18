@@ -45,6 +45,62 @@
           (.add grp fing))))
     grp))
 
+(defn- build-dims
+  [{:keys [board-width board-depth board-length finger-count finger-width]}]
+  (let [bw       board-width
+        bd       board-depth
+        fw       finger-width
+        body-len (- board-length fw)
+        hbw      (/ bw 2)
+        hbd      (/ bd 2)
+        total-w  (* finger-count fw 2)
+        ;; x centre of board-a's first finger
+        f0x      (+ (/ (- bw total-w) 2) (/ fw 2) (- hbw))]
+    {:board-a
+     [;; Board width at top-back of body (X)
+      {:from       [(- hbw) hbd (- (/ body-len 2))]
+       :to         [hbw     hbd (- (/ body-len 2))]
+       :offset-dir [0 1 0]
+       :offset-dist 15
+       :label      (str bw "mm")}
+      ;; Board depth at right side of body (Y)
+      {:from       [hbw (- hbd) (- (/ body-len 2))]
+       :to         [hbw    hbd  (- (/ body-len 2))]
+       :offset-dir [1 0 0]
+       :offset-dist 15
+       :label      (str bd "mm")}
+      ;; Finger width on top of first finger (Z)
+      {:from       [f0x hbd 0]
+       :to         [f0x hbd fw]
+       :offset-dir [0 1 0]
+       :offset-dist 15
+       :label      (str fw "mm")}
+      ;; Body length (Z)
+      {:from       [hbw hbd 0]
+       :to         [hbw hbd (- body-len)]
+       :offset-dir [1 0 0]
+       :offset-dist 15
+       :label      (str body-len "mm")}]
+     :board-b
+     [;; Board width at top-back of body (X)
+      {:from       [(- hbw) hbd (/ body-len 2)]
+       :to         [hbw     hbd (/ body-len 2)]
+       :offset-dir [0 1 0]
+       :offset-dist 15
+       :label      (str bw "mm")}
+      ;; Board depth at right side of body (Y)
+      {:from       [hbw (- hbd) (/ body-len 2)]
+       :to         [hbw    hbd  (/ body-len 2)]
+       :offset-dir [1 0 0]
+       :offset-dist 15
+       :label      (str bd "mm")}
+      ;; Body length (Z)
+      {:from       [hbw hbd 0]
+       :to         [hbw hbd body-len]
+       :offset-dir [1 0 0]
+       :offset-dist 15
+       :label      (str body-len "mm")}]}))
+
 (def definition
   {:id      :box-finger
    :label   "Box / Finger"
@@ -56,6 +112,7 @@
                        edge    (/ (- board-width total-w) 2)]
                    [["Finger pitch"  (str (* finger-width 2) "\u00a0mm")]
                     ["Edge offset"   (str edge "\u00a0mm")]]))
+   :dims-fn  build-dims
    :min-explode 0.10  ; fingers are 10 mm; need f≥0.0625 to avoid interpenetration
    :parts   [{:id :board-a :label "Board A" :explode-dir [0 0 -1]}
              {:id :board-b :label "Board B" :explode-dir [0 0  1]}]
