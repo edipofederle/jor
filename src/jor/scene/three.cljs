@@ -8,17 +8,18 @@
 ;; Single scene state atom — holds all Three.js objects.
 ;; Never put this in re-frame; Three.js objects are not serialisable.
 (defonce ^:private state
-  (atom {:renderer      nil
-         :css2d         nil   ; CSS2DRenderer for HTML labels
-         :scene         nil
-         :camera        nil
-         :controls      nil
-         :raf-id        nil
-         :groups        {}
-         :show-dims?    false
-         :current-joint  nil  ; cached for animation / dim toggling
-         :current-params nil
-         :anim          {:playing? false :factor 0.0 :dir 1}}))
+  (atom {:renderer        nil
+         :css2d           nil   ; CSS2DRenderer for HTML labels
+         :scene           nil
+         :camera          nil
+         :controls        nil
+         :raf-id          nil
+         :groups          {}
+         :show-dims?      false
+         :current-joint   nil  ; cached for animation / dim toggling
+         :current-params  nil
+         :highlighted-part nil ; part-id being highlighted, or nil
+         :anim            {:playing? false :factor 0.0 :dir 1}}))
 
 ;; ── Init ────────────────────────────────────────────────────────────────────
 
@@ -152,6 +153,33 @@
 (defn dims-showing? []
   (:show-dims? @state))
 
+;; ── Part highlighting ────────────────────────────────────────────────────────
+
+(defn highlight-step!
+  "Dim all part groups except part-id. Pass nil to restore everything.
+   Clones materials on the way down so shared materials are not mutated."
+  [part-id]
+  (swap! state assoc :highlighted-part part-id)
+  (let [{:keys [groups]} @state]
+    (doseq [[gid ^js grp] groups]
+      (let [active? (or (nil? part-id) (= gid part-id))]
+        (.traverse grp
+                   (fn [^js obj]
+                     (when (.-isMesh obj)
+                       (if active?
+                         (when-let [orig (.. obj -userData -origMat)]
+                           (set! (.-material obj) orig)
+                           (js-delete (.-userData obj) "origMat"))
+                         (when-not (.. obj -userData -origMat)
+                           (let [orig (.-material obj)
+                                 dim  (.clone orig)]
+                             (set! (.-transparent dim) true)
+                             (set! (.-depthWrite dim) false)
+                             (set! (.-opacity dim) 0.15)
+                             (set! (.-needsUpdate dim) true)
+                             (aset (.-userData obj) "origMat" orig)
+                             (set! (.-material obj) dim)))))))))))
+
 ;; ── Rebuild joint ────────────────────────────────────────────────────────────
 
 (defn rebuild-joint!
@@ -169,7 +197,10 @@
         (.add scene grp)))
     ;; Re-attach dim annotations if they were visible before the rebuild.
     (when (:show-dims? @state)
-      (add-dims-to-groups! joint-def params))))
+      (add-dims-to-groups! joint-def params))
+    ;; Re-apply part highlighting if a step was active.
+    (when-let [part (:highlighted-part @state)]
+      (highlight-step! part))))
 
 ;; ── Animation ────────────────────────────────────────────────────────────────
 

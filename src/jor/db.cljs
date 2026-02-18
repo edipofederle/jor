@@ -11,10 +11,10 @@
    :viewport
    {:explode-factor 0.0}
 
-   ;; Phase 3 — cut sequence animation
+   ;; cut-step — the currently active {:step n :label "..." :part kw} or nil
    :animation
    {:playing? false
-    :cut-step 0}
+    :cut-step nil}
 
    :ui
    {:sidebar-open? true}})

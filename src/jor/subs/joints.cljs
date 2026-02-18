@@ -34,6 +34,15 @@
    (boolean (:dims-fn joint))))
 
 (rf/reg-sub
+ :cut-seq
+ :<- [:active-joint]
+ (fn [joint _] (:cut-seq joint)))
+
+(rf/reg-sub
+ :cut-step
+ (fn [db _] (get-in db [:animation :cut-step])))
+
+(rf/reg-sub
  :merged-joint-params
  :<- [:active-joint]
  :<- [:active-joint-id]

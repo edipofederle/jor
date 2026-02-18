@@ -1,5 +1,6 @@
 (ns jor.events.joints
-  (:require [re-frame.core :as rf]))
+  (:require [re-frame.core :as rf]
+            [jor.scene.three :as three]))
 
 (rf/reg-event-db
  :initialize-db
@@ -8,10 +9,20 @@
 (rf/reg-event-db
  :select-joint
  (fn [db [_ joint-id]]
+   (three/highlight-step! nil)
    (-> db
        (assoc :active-joint-id joint-id)
-       (assoc-in [:animation :cut-step] 0)
+       (assoc-in [:animation :cut-step] nil)
        (assoc-in [:animation :playing?] false))))
+
+(rf/reg-event-db
+ :set-cut-step
+ (fn [db [_ step]]
+   ;; Clicking the active step deselects it
+   (let [current  (get-in db [:animation :cut-step])
+         new-step (when (not= (:step step) (:step current)) step)]
+     (three/highlight-step! (:part new-step))
+     (assoc-in db [:animation :cut-step] new-step))))
 
 (rf/reg-event-db
  :set-joint-param
