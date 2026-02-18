@@ -14,12 +14,12 @@
 ;;      ████████████████████      ← post body    (y = -body-length to 0)
 
 (def default-params
-  {:post-width       50    ; X width of post (and rail body)
-   :post-depth       50    ; Z depth of post cross-section; also = fork depth in Y
-   :post-length      200   ; total Y height of post (body + fork)
-   :rail-depth       20    ; Y thickness of the rail board
-   :rail-length      150   ; Z total length of rail (centred at joint)
-   :cheek-thickness  12})  ; X thickness of each fork cheek
+  {:post-width       40    ; X width of post (and rail body)
+   :post-depth       40    ; Z depth of post cross-section; also = fork depth in Y
+   :post-length      150   ; total Y height of post (body + fork)
+   :rail-depth       16    ; Y thickness of the rail board
+   :rail-length      120   ; Z total length of rail (centred at joint)
+   :cheek-thickness  10})  ; X thickness of each fork cheek
 
 (defn- post
   [{:keys [post-width post-depth post-length cheek-thickness]}]
