@@ -124,6 +124,37 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .param-name { color: var(--text-dim); }
 .param-val  { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
 
+/* ── Tool image tooltip (position: fixed to escape sidebar overflow) ── */
+.tool-tooltip {
+  position: fixed;
+  left: var(--sidebar-w);
+  z-index: 999;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  width: 200px;
+  transform: translateY(-50%);
+}
+
+.tool-tooltip img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 3px;
+}
+
+.tool-tooltip-name {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
 /* ── Hand tools list ──────────────────────────────── */
 .tools-list {
   list-style: disc;
@@ -135,7 +166,10 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   font-size: 0.72rem;
   color: var(--text-dim);
   padding: 2px 0;
+  cursor: default;
 }
+
+.tools-list li:hover { color: var(--text); }
 
 .tools-list li::marker { color: var(--accent); }
 
