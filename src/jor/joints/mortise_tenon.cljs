@@ -18,15 +18,15 @@
 ;; Explode separates them along Z.
 
 (def default-params
-  {:rail-width        50   ; X width of rail board
-   :rail-depth        20   ; Y thickness of rail board
-   :rail-length       150  ; Z body length of rail (not including tenon)
-   :stile-width       50   ; X width of stile
-   :stile-depth       50   ; Z depth of stile (tenon passes through this direction)
-   :stile-length      200  ; Y total height of stile
-   :tenon-length      50   ; Z length of tenon  (= stile-depth = through-mortise)
-   :tenon-width       30   ; X width of tenon   (< stile-width, creates shoulders)
-   :tenon-thickness   12}) ; Y height of tenon  (< rail-depth,  creates shoulders)
+  {:rail-width        40   ; X width of rail board
+   :rail-depth        16   ; Y thickness of rail board
+   :rail-length       100  ; Z body length of rail (not including tenon)
+   :stile-width       40   ; X width of stile
+   :stile-depth       40   ; Z depth of stile (tenon passes through this direction)
+   :stile-length      150  ; Y total height of stile
+   :tenon-length      40   ; Z length of tenon  (= stile-depth = through-mortise)
+   :tenon-width       24   ; X width of tenon   (< stile-width, creates shoulders)
+   :tenon-thickness   10}) ; Y height of tenon  (< rail-depth,  creates shoulders)
 
 (defn- stile
   [{:keys [stile-width stile-depth stile-length tenon-width tenon-thickness]}]
