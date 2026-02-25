@@ -277,5 +277,5 @@
   (let [{:keys [^js camera ^js controls]} @state]
     (when camera
       (.set (.-position camera) 200 150 200)
-      (.lookAt camera 0 0 0)
+      (.set (.-target controls) 0 0 0)
       (.update controls))))
