@@ -32,3 +32,14 @@ npx shadow-cljs release app
 # Open a browser REPL (after `watch` is running)
 npx shadow-cljs cljs-repl app
 ```
+
+## Docker
+
+Build and run a production image served by nginx on port 8080:
+
+```bash
+docker build -t jor .
+docker run -p 8080:80 jor
+```
+
+Then open http://localhost:8080.
